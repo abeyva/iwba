@@ -1,4 +1,4 @@
-#Intagarated Webserver build automation using Ansible, Flask, and Lambda
+# Intagarated Webserver build automation using Ansible, Flask, and Lambda
 
 ## Project Overview
 
