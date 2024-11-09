@@ -1,0 +1,149 @@
+- name: Install Java and Tomcat instances on CentOS
+  hosts: all  # Specify the target hosts here
+  remote_user: ec2-user  # Replace with the appropriate user
+  become: yes
+  vars:
+    base_dir: "/local/apps"
+    tomcat_instances:
+      - instance1
+      - instance2
+      - instance3
+    base_http_port: 8080
+    base_ajp_port: 8009
+    base_shutdown_port: 8005
+    startup_wait: 30
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+
+  tasks:
+    - name: Ensure the base directory exists
+      file:
+        path: "{{ base_dir }}"
+        state: directory
+
+    - name: Install Java on CentOS
+      yum:
+        name: java-1.8.0-openjdk
+        state: present
+
+    - name: Create a directory for Java
+      file:
+        path: "{{ base_dir }}/jdk"
+        state: directory
+
+    - name: Create a group for each Tomcat instance
+      group:
+        name: "{{ item }}"
+      loop: "{{ tomcat_instances }}"
+
+    - name: Create a user for each Tomcat instance
+      user:
+        name: "{{ item }}"
+        group: "{{ item }}"
+        create_home: no
+        shell: /sbin/nologin
+      loop: "{{ tomcat_instances }}"
+
+    - name: Create directories for Tomcat instances
+      file:
+        path: "{{ base_dir }}/{{ item }}"
+        state: directory
+        owner: "{{ item }}"
+        group: "{{ item }}"
+      loop: "{{ tomcat_instances }}"
+
+    - name: Download and extract Tomcat
+      unarchive:
+        src: "https://archive.apache.org/dist/tomcat/tomcat-9/v9.0.93/bin/apache-tomcat-9.0.93.tar.gz"
+        dest: "{{ base_dir }}/{{ item }}"
+        remote_src: yes
+        creates: "{{ base_dir }}/{{ item }}/apache-tomcat-9.0.93"
+        owner: "{{ item }}"
+        group: "{{ item }}"
+      loop: "{{ tomcat_instances }}"
+
+    - name: Rename the Tomcat directory
+      command: mv {{ base_dir }}/{{ item }}/apache-tomcat-9.0.93 {{ base_dir }}/{{ item }}/tomcat
+      loop: "{{ tomcat_instances }}"
+      notify:
+        - Change ownership of Tomcat directories
+
+    - name: Set port mappings for Tomcat instances
+      set_fact:
+        tomcat_ports: "{{ tomcat_ports | default({}) | combine({ item: {'http': base_http_port + index, 'ajp': base_ajp_port + index, 'shutdown': base_shutdown_port + index, 'redirect': base_http_port + index} }) }}"
+      loop: "{{ tomcat_instances }}"
+      loop_control:
+        index_var: index
+
+    - name: Delete default server.xml for each Tomcat instance
+      file:
+        path: "{{ base_dir }}/{{ item }}/tomcat/conf/server.xml"
+        state: absent
+      loop: "{{ tomcat_instances }}"
+
+    - name: Create a new server.xml with the required configurations
+      blockinfile:
+        path: "{{ base_dir }}/{{ item }}/tomcat/conf/server.xml"
+        create: yes
+        marker: ""
+        block: |
+          <Server port="{{ tomcat_ports[item].shutdown }}" shutdown="SHUTDOWN">
+              <Service name="Catalina">
+                  <Connector port="{{ tomcat_ports[item].http }}" protocol="HTTP/1.1"
+                             connectionTimeout="20000"
+                             redirectPort="{{ tomcat_ports[item].redirect }}" />
+                  <Connector port="{{ tomcat_ports[item].ajp }}" protocol="AJP/1.3"
+                             redirectPort="{{ tomcat_ports[item].redirect }}" />
+                  <Engine name="Catalina" defaultHost="localhost">
+                      <Host name="localhost" appBase="webapps"
+                            unpackWARs="true" autoDeploy="true">
+                      </Host>
+                  </Engine>
+              </Service>
+          </Server>
+      loop: "{{ tomcat_instances }}"
+
+    - name: Set up Tomcat environment variables
+      lineinfile:
+        path: "{{ base_dir }}/{{ item }}/tomcat/bin/setenv.sh"
+        line: "export CATALINA_HOME={{ base_dir }}/{{ item }}/tomcat"
+        create: yes
+        owner: "{{ item }}"
+        group: "{{ item }}"
+      loop: "{{ tomcat_instances }}"
+
+    - name: Start Tomcat instances as respective users
+      become: yes
+      become_user: "{{ item }}"
+      command: "{{ base_dir }}/{{ item }}/tomcat/bin/startup.sh"
+      loop: "{{ tomcat_instances }}"
+      register: tomcat_start
+      ignore_errors: yes
+
+    - name: Delay to allow Tomcat to start
+      pause:
+        seconds: "{{ startup_wait }}"
+
+    - name: Create a README file with Tomcat instances, URLs, and start instructions
+      copy:
+        dest: "{{ base_dir }}/README.txt"
+        content: |
+          The following Tomcat instances have been installed and configured:
+
+          {% for instance in tomcat_instances %}
+          - {{ instance }}:
+            URL: http://localhost:{{ tomcat_ports[instance].http }}
+            Demo Page: http://localhost:{{ tomcat_ports[instance].http }}/
+            Start Command: sudo -u {{ instance }} {{ base_dir }}/{{ instance }}/tomcat/bin/startup.sh
+            Stop Command: sudo -u {{ instance }} {{ base_dir }}/{{ instance }}/tomcat/bin/shutdown.sh
+          {% endfor %}
+
+    - name: Set ownership of README file
+      file:
+        path: "{{ base_dir }}/README.txt"
+        owner: root
+        group: root
+
+  handlers:
+    - name: Change ownership of Tomcat directories
+      command: chown -R {{ item }}:{{ item }} {{ base_dir }}/{{ item }}/tomcat
+      loop: "{{ tomcat_instances }}"
