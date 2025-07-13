@@ -1,5 +1,5 @@
-# Integrated Webserver build automation using Ansible, Flask, and Lambda
-
+# 🚀 Integrated Webserver Build Automation (IWBA) using Ansible, Multi cloud implimentation (AWS & Azure)
+![IWBA Banner](https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiBxeBu3nnHuK6LFFIOKaiIBoNAOFbQmcD1L58Mm7_Z2vPZVNbPfxHY454tXhPV3GnwSIEolHLbq_6DBNCQ0g4fTPqJccK0QMBTrc-k4C_RUK2ry4-Na5yj6KTPCowfVeVe7vihnuM-qxbF1lxY83BiFbFphUblpZXzfherp6bmO2aNHtcHmmfPv3wmS1E/s1370/iwba2.png)
 ## Project Overview
 
 This project automates the deployment and configuration of Tomcat instances on AWS EC2 using Ansible, AWS Lambda, and a Flask-based web interface. It streamlines server builds by allowing users to configure Tomcat server environments dynamically, specifying instance types, custom ports, and more. This solution is designed to reduce manual configuration time, ensure consistency, and enhance scalability for Tomcat-based deployments.
@@ -11,10 +11,7 @@ This project automates the deployment and configuration of Tomcat instances on A
 - **DynamoDB Integration:** Stores build metadata for easy tracking and auditing.
 - **Ansible Playbooks:** Automates server setup, including OpenJDK installation, Tomcat configuration, and custom port assignments.
 - **Automated Documentation:** Outputs deployment details in a README.txt file within the deployed server environment.
-  
-# 🚀 Integrated Webserver Build Automation (IWBA) using Ansible, AWS & Azure
 
-![IWBA Banner](https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiBxeBu3nnHuK6LFFIOKaiIBoNAOFbQmcD1L58Mm7_Z2vPZVNbPfxHY454tXhPV3GnwSIEolHLbq_6DBNCQ0g4fTPqJccK0QMBTrc-k4C_RUK2ry4-Na5yj6KTPCowfVeVe7vihnuM-qxbF1lxY83BiFbFphUblpZXzfherp6bmO2aNHtcHmmfPv3wmS1E/s1370/iwba2.png)
 
 ## 📌 Description
 
